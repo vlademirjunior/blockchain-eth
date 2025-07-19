@@ -30,7 +30,7 @@
 			"extensions": [
 				"ms-python.python",
 				"vscode-icons-team.vscode-icons",
-				"editorconfig.editorconfig"
+				"cnshenj.vscode-task-manager"
 			]
 		}
 	}

@@ -61,8 +61,22 @@
 [The Miro Reference](https://miro.com/app/board/uXjVJdxGUcs=/?moveToWidget=3458764635046362117&cot=14)
 
 - In blockchain transactions, confirmation refers to how many blocks have been added to the blockchain since a transaction was included in a block.
+- ETH implement PoS with `12 seconds` to build a block.
 - The more confirmations a transaction has, the more secure and irreversible it is considered.
 - While one confirmation indicates the transaction is recorded, it's not fully secure or irreversible. Generally, `6` confirmations are considered "safe" for `most` transactions.
   - I'm using `12` because is enough.
   - Different blockchains and platforms may have different confirmation requirements.
-- On the Ethereum network, it generally takes about 20 minutes to add a new block, meaning 12 confirmations would take about 20 minutes.
+
+## 300s (Background timeout)
+
+- 5-minute timeout (ETH => Proof-of-Stake 12s)
+  - depends on maxPriorityFeePerGas (low = more time)
+  - Validators will always choose the transactions that pay them the most.
+  - 5 minutes means I will wait until 25 blocks (300 / 12 = 25).
+    - If a transaction is not included in 25 blocks, it is a very strong signal that the gas fee has been set too low  for the current network conditions, and the transaction may be "stuck" in the mempool for an extended period.
+
+## Validation Transaction
+
+- In real world project maybe use an audit log table to add the changes of tx
+- For simplicity, I assume 18 decimals for both transactions
+- If it does not exist a tx (e.g., an incoming deposit), CREATE it.

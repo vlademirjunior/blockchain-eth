@@ -1,7 +1,7 @@
 import json
 from typing import List, Dict, Any, Optional
-from web3 import AsyncWeb3, AsyncHTTPProvider
-from web3.exceptions import TransactionNotFound
+from web3 import AsyncWeb3, AsyncHTTPProvider, Web3
+from web3.exceptions import TransactionNotFound, TimeExhausted
 from src.core.interfaces import IBlockchainService
 
 
@@ -48,8 +48,8 @@ class Web3BlockchainService(IBlockchainService):
         return await self.web3.eth.estimate_gas(transaction)
 
     async def broadcast_transaction(self, signed_tx_hex: str) -> str:
-        tx_hash = await self.web3.eth.send_raw_transaction(signed_tx_hex)
-        return tx_hash.hex()
+        tx_hash_bytes = await self.web3.eth.send_raw_transaction(signed_tx_hex)
+        return Web3.to_hex(tx_hash_bytes)
 
     async def get_eth_balance(self, address: str) -> int:
         if not self.web3.is_address(address):
@@ -58,9 +58,10 @@ class Web3BlockchainService(IBlockchainService):
         # This is an async method with the async provider
         return await self.web3.eth.get_balance(checksum_address)
 
-    async def decode_contract_transaction(self,
-                                          tx_hash: str,
-                                          contract_abi: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    async def decode_contract_transaction(
+            self,
+            tx_hash: str,
+            contract_abi: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         tx = await self.get_transaction_details(tx_hash)
         if not tx or not tx.get('to') or not tx.get('input'):
             return None
@@ -85,3 +86,14 @@ class Web3BlockchainService(IBlockchainService):
         checksum_address = self.web3.to_checksum_address(address)
 
         return await self.web3.eth.get_transaction_count(checksum_address)
+
+    async def wait_for_transaction_receipt(
+            self, tx_hash: str, timeout: int) -> Optional[Dict[str, Any]]:
+        """
+        Waits for a transaction receipt to be available and returns it.
+        """
+        try:
+            receipt = await self.web3.eth.wait_for_transaction_receipt(tx_hash, timeout)
+            return dict(receipt) if receipt else None
+        except (TransactionNotFound, TimeExhausted):
+            return None

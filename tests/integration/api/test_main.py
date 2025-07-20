@@ -1,14 +1,12 @@
 from fastapi.testclient import TestClient
-
 from src.api.main import app
 
-# Arrange
 client = TestClient(app)
 
 
-def test_read_main():
+def test_health_checks():
     """
-    Tests the root endpoint of the transactions router.
+    Tests if the Blockchain Ethereum API is healthy.
 
     It verifies that the endpoint:
     1. Returns a successful 200 OK status code.
@@ -20,4 +18,4 @@ def test_read_main():
     # Assert
     assert response.status_code == 200
     assert response.json() == {
-        'msg': "Blockchain Ethereum API is running"}
+        'healthy': True}

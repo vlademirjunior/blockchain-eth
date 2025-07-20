@@ -20,7 +20,7 @@ TestSessionLocal = async_sessionmaker(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session() -> AsyncSession:
+async def db_session() -> AsyncSession:  # type: ignore
     """
     Pytest fixture that provides a clean database session for each test function.
     """
@@ -166,3 +166,44 @@ class TestTransactionRepository:
         assert "0x_all_1" in found_hashes
         assert "0x_all_2" in found_hashes
         assert "0x_all_3" in found_hashes
+
+    async def test_update_transaction(self, transaction_repo: TransactionRepository):
+        """
+        Tests if a transaction's status and effective cost can be updated.
+        """
+        # Arrange
+        initial_tx_entity = Transaction(
+            tx_hash="0x_update_test",
+            asset="ETH",
+            from_address="0xFrom",
+            to_address="0xTo",
+            value=Decimal("2.0"),
+            status=TransactionStatus.PENDING,
+            effective_cost=Decimal("0")
+        )
+        await transaction_repo.create(initial_tx_entity)
+
+        # Arrange
+        updated_tx_entity = Transaction(
+            tx_hash="0x_update_test",
+            asset="ETH",
+            from_address="0xFrom",
+            to_address="0xTo",
+            value=Decimal("2.0"),
+            status=TransactionStatus.CONFIRMED,  # New status
+            effective_cost=Decimal("0.005")  # New cost
+        )
+
+        # Act
+        result = await transaction_repo.update(updated_tx_entity)
+
+        # Assert
+        assert result is not None
+        assert result.status == TransactionStatus.CONFIRMED
+        assert result.effective_cost == Decimal("0.005")
+
+        refetched_tx = await transaction_repo.find_by_hash("0x_update_test")
+
+        assert refetched_tx is not None
+        assert refetched_tx.status == TransactionStatus.CONFIRMED
+        assert refetched_tx.effective_cost == Decimal("0.005")

@@ -55,7 +55,7 @@
   - What happens if my `NonceManager` provides a nonce of `10`, but the transaction fails to be sent to the blockchain (e.g., the RPC node is offline)?
     - My `NonceManager` thinks that next nonce is `11`, but the blockchain is `still expecting 10`. **All future transactions to that address will fail with the `nonce too high` error**.
     - My solution (Enough for the Challenge) is:
-      - Restart the application!
+      - Restart the API!
       - Upon `restart`, the *NonceManager will re-synchronize with the blockchain and obtain the correct nonces*.
     - In a production environment, I could use Redis for this because probably implement it with K8S.
 - In a real application, I might want to filter for addresses that are actually used for sending transactions on my NonceManager.

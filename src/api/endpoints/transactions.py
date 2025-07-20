@@ -10,6 +10,7 @@ from src.api.schemas import (
 )
 from src.core.interfaces import ITransactionService
 from src.api.dependencies import get_transaction_service
+from web3.exceptions import Web3RPCError
 
 router = APIRouter()
 
@@ -17,6 +18,7 @@ router = APIRouter()
 @router.post(
     "/validate",
     response_model=TransactionValidateResponse,
+    status_code=status.HTTP_200_OK,
     summary="Validate an On-Chain Transaction",
     description="Receives a transaction hash, validates its security (confirmations) and if the destination is a managed address. If valid, it is stored in the history."
 )
@@ -64,8 +66,8 @@ async def create_transaction(
             value=request.value
         )
 
-        # TODO: Add the background task to wait for confirmation
-        # background_tasks.add_task(service.wait_for_confirmation, pending_tx.tx_hash)
+        background_tasks.add_task(
+            service.wait_for_confirmation, pending_tx.tx_hash)
 
         return TransactionCreateResponse(
             status=pending_tx.status.value,
@@ -76,11 +78,24 @@ async def create_transaction(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except Web3RPCError as e:
+        # Catch the specific "insufficient funds" error from the node
+        if "insufficient funds" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The source address ({request.from_address}) has insufficient funds to perform the transaction. Please fund it using a Sepolia faucet."
+            )
+        # Handle other potential RPC errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred with the blockchain node: {str(e)}"
+        )
 
 
 @router.get(
     "/history",
     response_model=TransactionHistoryResponse,
+    status_code=status.HTTP_200_OK,
     summary="Get transaction history",
     description="Retrieves the history of all transactions, optionally filtered by a specific Ethereum address."
 )

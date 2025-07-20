@@ -1,11 +1,11 @@
+import asyncio
 import os
 from decimal import Decimal
 from typing import List, Optional
-
 from eth_account import Account
 from web3 import Web3
-
-from .entities import Transaction
+from web3.exceptions import TimeExhausted
+from .entities import Address, Transaction
 from .enums import TransactionStatus
 from .interfaces import (
     ITransactionRepository,
@@ -13,7 +13,8 @@ from .interfaces import (
     IBlockchainService,
     IEncryptionService,
     INonceManager,
-    ITransactionService
+    ITransactionService,
+    IAddressService
 )
 
 
@@ -74,23 +75,31 @@ class TransactionService(ITransactionService):
         # Check if the FINAL destination is one managed addresses
         managed_address = await self.address_repo.find_by_public_address(final_to_address)
         if not managed_address:
-            return None  # Not a transaction for us
+            return None  # Not a transaction for my API
 
-        # TODO: For ERC-20, I would need to fetch the token decimal to convert from wei correctly.
-        # For simplicity, I assume 18 decimals for both.
-        tx_entity = Transaction(
-            tx_hash=tx_hash,
-            asset=asset,
-            from_address=tx_details['from'],
-            to_address=final_to_address,
-            value=Web3.from_wei(value_in_wei, 'ether'),
-            status=TransactionStatus.VALIDATED,
-            effective_cost=Web3.from_wei(
-                receipt['gasUsed'] * receipt['effectiveGasPrice'], 'ether')
+        # --- Upsert Logic ---
+        effective_cost = Web3.from_wei(
+            receipt['gasUsed'] * receipt['effectiveGasPrice'], 'ether'
         )
 
-        await self.transaction_repo.create(tx_entity)
-        return tx_entity
+        existing_tx = await self.transaction_repo.find_by_hash(tx_hash)
+
+        if existing_tx:
+            existing_tx.status = TransactionStatus.VALIDATED
+            existing_tx.effective_cost = effective_cost
+            return await self.transaction_repo.update(existing_tx)
+        else:
+            # TODO: For ERC-20, I would need to fetch the token decimal to convert from wei correctly.
+            tx_entity = Transaction(
+                tx_hash=tx_hash,
+                asset=asset,
+                from_address=tx_details['from'],
+                to_address=final_to_address,
+                value=Web3.from_wei(value_in_wei, 'ether'),
+                status=TransactionStatus.VALIDATED,
+                effective_cost=effective_cost
+            )
+            return await self.transaction_repo.create(tx_entity)
 
     async def create_onchain_transaction(
         self,
@@ -153,8 +162,6 @@ class TransactionService(ITransactionService):
 
         await self.transaction_repo.create(tx_entity)
 
-        # TODO: Schedule a background task to wait for the receipt and update the status
-
         return tx_entity
 
     async def get_all_transaction_history(self) -> List[Transaction]:
@@ -165,6 +172,87 @@ class TransactionService(ITransactionService):
         db_transactions = await self.transaction_repo.get_history(address=address)
         return [Transaction.model_validate(tx) for tx in db_transactions]
 
+    async def wait_for_confirmation(self, tx_hash: str):
+        """
+        This method is designed to be run as a background task.
+        It waits for the transaction receipt and updates the DB record.
+        """
+        print(f"BACKGROUND TASK: Started monitoring tx_hash: {tx_hash}")
+        try:
+            # Wait for the transaction receipt from the blockchain
+            receipt = await self.blockchain_service.wait_for_transaction_receipt(tx_hash, timeout=300)
 
-class AddressService:
-    pass
+            # Find the original transaction record
+            tx_entity = await self.transaction_repo.find_by_hash(tx_hash)
+            if not tx_entity:
+                print(
+                    f"BACKGROUND TASK ERROR: Could not find tx_hash {tx_hash} in DB to update.")
+                return
+
+            # Update status and cost based on the receipt
+            if receipt and receipt.get('status') == 1:
+                tx_entity.status = TransactionStatus.CONFIRMED
+                tx_entity.effective_cost = Web3.from_wei(
+                    receipt.get('gasUsed', 0) *
+                    receipt.get('effectiveGasPrice', 0), 'ether'
+                )
+                print(
+                    f"BACKGROUND TASK: Transaction {tx_hash} confirmed successfully.")
+            else:
+                tx_entity.status = TransactionStatus.FAILED
+                print(
+                    f"BACKGROUND TASK: Transaction {tx_hash} failed or receipt not found.")
+
+            # Save the final state to the database
+            await self.transaction_repo.update(tx_entity)
+
+        except (TimeExhausted, asyncio.TimeoutError):
+            print(
+                f"BACKGROUND TASK TIMEOUT: Transaction {tx_hash} was not confirmed within the timeout period.")
+            # Optionally, you could set the status to a special "timed_out" state here.
+        except Exception as e:
+            print(
+                f"BACKGROUND TASK ERROR: An unexpected error occurred while monitoring {tx_hash}: {e}")
+
+
+class AddressService(IAddressService):
+    """
+    Implements the business logic for managing Ethereum addresses.
+    """
+
+    def __init__(
+        self,
+        address_repo: IAddressRepository,
+        encryption_service: IEncryptionService
+    ):
+        self.address_repo = address_repo
+        self.encryption_service = encryption_service
+
+    async def create_new_addresses(self, count: int) -> List[Address]:
+        if not 0 < count <= 100:  # Basic validation
+            raise ValueError(
+                "Number of addresses to create must be between 1 and 100.")
+
+        new_addresses: List[Address] = []
+        for _ in range(count):
+            # Generate a new key pair in memory
+            new_account = Account.create()
+
+            # Encrypt the private key immediately
+            private_key_bytes = new_account.key
+            encrypted_key = self.encryption_service.encrypt(private_key_bytes)
+
+            # Create the address entity
+            address_entity = Address(
+                public_address=new_account.address,
+                encrypted_private_key=encrypted_key.decode(
+                    'utf-8')  # Store as string
+            )
+            new_addresses.append(address_entity)
+
+        await self.address_repo.create_many(new_addresses)
+
+        return new_addresses
+
+    async def get_all_addresses(self) -> List[Address]:
+        return await self.address_repo.get_all()

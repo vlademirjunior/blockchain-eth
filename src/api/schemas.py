@@ -61,3 +61,25 @@ class TransactionHistoryItem(BaseModel):
 class TransactionHistoryResponse(BaseModel):
     """Response from the history endpoint."""
     history: List[TransactionHistoryItem]
+
+
+class AddressCreateRequest(BaseModel):
+    """Request body to create new addresses."""
+    count: int = Field(..., gt=0, le=100,
+                       description="The number of new addresses to generate (1-100).")
+
+
+class AddressResponse(BaseModel):
+    """Represents a single public address in a response."""
+    public_address: str
+
+
+class AddressCreateResponse(BaseModel):
+    """Response after successfully creating new addresses."""
+    message: str
+    created_addresses: List[AddressResponse]
+
+
+class AddressListResponse(BaseModel):
+    """Response for the endpoint that lists all managed addresses."""
+    addresses: List[AddressResponse]

@@ -1,6 +1,7 @@
 import pytest
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
+from web3.exceptions import TimeExhausted
 from eth_account import Account
 from src.core.services import TransactionService
 from src.core.entities import Transaction as TransactionEntity, Address as AddressEntity
@@ -13,7 +14,6 @@ from src.core.interfaces import (
     INonceManager
 )
 
-# --- Mock Fixtures ---
 # TODO: Separate in files
 
 
@@ -65,19 +65,15 @@ def transaction_service(
         nonce_manager=mock_nonce_manager
     )
 
-# --- Tests for validate_onchain_transaction ---
-
 
 @pytest.mark.asyncio
 class TestValidateOnchainTransaction:
 
-    async def test_validation_success_for_eth_transfer(self, transaction_service: TransactionService, mock_address_repo: IAddressRepository, mock_blockchain_service: IBlockchainService, mock_transaction_repo: ITransactionRepository):
-        """
-        Tests the success case for validating an ETH transfer.
-        """
-        # Arrange
+    @pytest.fixture
+    def common_mocks(self, mock_address_repo: IAddressRepository, mock_blockchain_service: IBlockchainService):
+        """Fixture to set up common mock return values for validation tests."""
         tx_hash = "0x" + "a" * 64
-        managed_address = Account.create().address  # Use a valid checksum address
+        managed_address = Account.create().address
         sender_address = "0x" + "c" * 40
 
         mock_blockchain_service.get_transaction_details.return_value = {
@@ -86,22 +82,60 @@ class TestValidateOnchainTransaction:
         mock_blockchain_service.get_transaction_receipt.return_value = {
             'status': 1, 'blockNumber': 100, 'gasUsed': 21000, 'effectiveGasPrice': 10**9
         }
-        # Ensures 13 confirmations
         mock_blockchain_service.get_latest_block_number.return_value = 112
         mock_address_repo.find_by_public_address.return_value = AddressEntity(
             public_address=managed_address, encrypted_private_key="key")
+
+        return tx_hash, managed_address
+
+    async def test_validation_creates_new_record_for_incoming_tx(self, transaction_service: TransactionService, common_mocks, mock_transaction_repo: ITransactionRepository):
+        """
+        Tests the success case where an incoming transaction (not previously in our DB)
+        is validated and a NEW record is created.
+        """
+        # Arrange
+        tx_hash, _ = common_mocks
+        mock_transaction_repo.find_by_hash.return_value = None
 
         # Act
         result = await transaction_service.validate_onchain_transaction(tx_hash)
 
         # Assert
         assert result is not None
-        assert isinstance(result, TransactionEntity)
-        assert result.asset == "ETH"
-        # Case-insensitive comparison for checksum addresses
-        assert result.to_address.lower() == managed_address.lower()
-        assert result.value == Decimal("1.0")
+
+        # Verify that the 'create' method was called, not 'update'
         mock_transaction_repo.create.assert_awaited_once()
+        mock_transaction_repo.update.assert_not_awaited()
+
+    async def test_validation_updates_existing_record_for_outgoing_tx(self, transaction_service: TransactionService, common_mocks, mock_transaction_repo: ITransactionRepository):
+        """
+        Tests the success case where a transaction we created (status=PENDING)
+        is validated and the EXISTING record is updated.
+        """
+        # Arrange
+        tx_hash, managed_address = common_mocks
+        # Simulate that the transaction already exists in our DB with a PENDING status
+        existing_pending_tx = TransactionEntity(
+            tx_hash=tx_hash, asset="ETH", from_address="0xFrom", to_address=managed_address,
+            value=Decimal("1.0"), status=TransactionStatus.PENDING, effective_cost=Decimal("0")
+        )
+        mock_transaction_repo.find_by_hash.return_value = existing_pending_tx
+
+        # Act
+        result = await transaction_service.validate_onchain_transaction(tx_hash)
+
+        # Assert
+        assert result is not None
+
+        # Verify that the 'update' method was called, not 'create'
+        mock_transaction_repo.update.assert_awaited_once()
+        mock_transaction_repo.create.assert_not_awaited()
+
+        # Check that the entity passed to update has the correct new status
+        updated_entity_arg = mock_transaction_repo.update.await_args[0][0]
+
+        assert updated_entity_arg.status == TransactionStatus.VALIDATED
+        assert updated_entity_arg.effective_cost > 0
 
     async def test_validation_fails_if_not_enough_confirmations(self, transaction_service: TransactionService, mock_blockchain_service: IBlockchainService):
         """
@@ -141,8 +175,6 @@ class TestValidateOnchainTransaction:
 
         # Assert
         assert result is None
-
-# --- Tests for create_onchain_transaction ---
 
 
 @pytest.mark.asyncio
@@ -191,3 +223,86 @@ class TestCreateOnchainTransaction:
         # Act & Assert
         with pytest.raises(ValueError, match="Source address not managed by this service."):
             await transaction_service.create_onchain_transaction("0x" + "a" * 40, "0x" + "b" * 40, "ETH", Decimal("1"))
+
+
+@pytest.mark.asyncio
+class TestWaitForConfirmation:
+    """
+    Test suite for the wait_for_confirmation background task method.
+    """
+
+    async def test_wait_for_confirmation_success(self, transaction_service: TransactionService, mock_blockchain_service: IBlockchainService, mock_transaction_repo: ITransactionRepository):
+        """
+        Scenario: Tests that the transaction status is updated to CONFIRMED
+        when a successful receipt is returned.
+        """
+        # Arrange
+        tx_hash = "0x_confirmed_tx"
+
+        # Mock the blockchain service to return a successful receipt
+        mock_receipt = {'status': 1, 'gasUsed': 50000,
+                        'effectiveGasPrice': 20 * 10**9}
+        mock_blockchain_service.wait_for_transaction_receipt.return_value = mock_receipt
+
+        # Mock the repository to return a pending transaction that needs updating
+        pending_tx = TransactionEntity(
+            tx_hash=tx_hash, asset="ETH", from_address="0xFrom", to_address="0xTo",
+            value=Decimal("1"), status=TransactionStatus.PENDING, effective_cost=Decimal("0")
+        )
+        mock_transaction_repo.find_by_hash.return_value = pending_tx
+
+        # Act
+        await transaction_service.wait_for_confirmation(tx_hash)
+
+        # Assert
+        mock_blockchain_service.wait_for_transaction_receipt.assert_awaited_once_with(
+            tx_hash, timeout=300)
+        mock_transaction_repo.find_by_hash.assert_awaited_once_with(tx_hash)
+
+        # Verify that the update method was called with the correct, updated entity
+        mock_transaction_repo.update.assert_awaited_once()
+        updated_entity_arg = mock_transaction_repo.update.await_args[0][0]
+        assert updated_entity_arg.status == TransactionStatus.CONFIRMED
+        assert updated_entity_arg.effective_cost > 0
+
+    async def test_wait_for_confirmation_failed_tx(self, transaction_service: TransactionService, mock_blockchain_service: IBlockchainService, mock_transaction_repo: ITransactionRepository):
+        """
+        Scenario: Tests that the transaction status is updated to FAILED
+        when a failed receipt (status 0) is returned.
+        """
+        # Arrange
+        tx_hash = "0x_failed_tx"
+        mock_receipt = {'status': 0}  # Failed transaction
+        mock_blockchain_service.wait_for_transaction_receipt.return_value = mock_receipt
+
+        pending_tx = TransactionEntity(
+            tx_hash=tx_hash, asset="ETH", from_address="0xFrom", to_address="0xTo",
+            value=Decimal("1"), status=TransactionStatus.PENDING, effective_cost=Decimal("0")
+        )
+        mock_transaction_repo.find_by_hash.return_value = pending_tx
+
+        # Act
+        await transaction_service.wait_for_confirmation(tx_hash)
+
+        # Assert
+        mock_transaction_repo.update.assert_awaited_once()
+        updated_entity_arg = mock_transaction_repo.update.await_args[0][0]
+        assert updated_entity_arg.status == TransactionStatus.FAILED
+
+    async def test_wait_for_confirmation_timeout(self, transaction_service: TransactionService, mock_blockchain_service: IBlockchainService, mock_transaction_repo: ITransactionRepository):
+        """
+        Scenario: Tests that the transaction status is NOT updated
+        if the wait for receipt times out.
+        """
+        # Arrange
+        tx_hash = "0x_timeout_tx"
+        # Configure the mock to simulate a timeout
+        mock_blockchain_service.wait_for_transaction_receipt.side_effect = TimeExhausted(
+            "Timeout")
+
+        # Act
+        await transaction_service.wait_for_confirmation(tx_hash)
+
+        # Assert
+        # The most important assertion is that the update method was NEVER called
+        mock_transaction_repo.update.assert_not_awaited()

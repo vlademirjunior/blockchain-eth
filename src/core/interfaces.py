@@ -12,6 +12,10 @@ class ITransactionRepository(ABC):
         pass
 
     @abstractmethod
+    async def update(self, transaction: Transaction) -> None:
+        pass
+
+    @abstractmethod
     async def find_by_hash(self, tx_hash: str):
         pass
 
@@ -42,6 +46,8 @@ class IBlockchainService(ABC):
     """
     Interface for a service that handles all interactions with the Ethereum blockchain.
     """
+    erc20_abi: List[Dict[str, Any]]
+
     @abstractmethod
     async def is_connected(self) -> bool:
         """Checks if the connection to the node is active."""
@@ -86,6 +92,14 @@ class IBlockchainService(ABC):
     @abstractmethod
     async def get_transaction_count(self, address: str) -> int:
         """Gets the transaction count (nonce) for a given address."""
+        pass
+
+    @abstractmethod
+    async def wait_for_transaction_receipt(self, tx_hash: str, timeout: int) -> Optional[Dict[str, Any]]:
+        """
+        Waits for a transaction receipt to be available and returns it.
+        Returns None if the timeout is reached.
+        """
         pass
 
 
@@ -136,7 +150,7 @@ class ITransactionService(ABC):
     @abstractmethod
     async def validate_onchain_transaction(self, tx_hash: str) -> Optional[Transaction]:
         """
-        Validates an on-chain transaction and, if valid, saves it to the history.
+        Validates an on-chain transaction and, if valid, update it.
         Returns the transaction entity if valid, otherwise None.
         """
         pass
@@ -167,5 +181,35 @@ class ITransactionService(ABC):
     async def get_transaction_history_for_address(self, address: str) -> List[Transaction]:
         """
         Retrieves the history of managed transactions filtered by a specific Ethereum address.
+        """
+        pass
+
+    @abstractmethod
+    async def wait_for_confirmation(self, tx_hash: str) -> None:
+        """
+        Waits for a transaction to be confirmed on the blockchain and updates its
+        status and effective cost in the database.
+        """
+        pass
+
+
+class IAddressService(ABC):
+    """
+    Interface for the service that orchestrates address-related business logic.
+    """
+
+    @abstractmethod
+    async def create_new_addresses(self, count: int) -> List[Address]:
+        """
+        Generates a specified number of new Ethereum addresses,
+        encrypts their private keys, and persists them.
+        Returns the list of created address entities.
+        """
+        pass
+
+    @abstractmethod
+    async def get_all_addresses(self) -> List[Address]:
+        """
+        Retrieves all managed addresses.
         """
         pass

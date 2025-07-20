@@ -21,6 +21,27 @@ class TransactionRepository(ITransactionRepository):
 
         return Transaction.model_validate(db_transaction)
 
+    async def update(self, transaction_entity: Transaction) -> Optional[Transaction]:
+        """
+        Finds a transaction by its hash and updates its status and effective cost.
+        """
+        query = select(models.TransactionDB).where(
+            models.TransactionDB.tx_hash == transaction_entity.tx_hash
+        )
+        result = await self.db.execute(query)
+        db_transaction = result.scalar_one_or_none()
+
+        if db_transaction:
+            db_transaction.status = transaction_entity.status.value
+            db_transaction.effective_cost = transaction_entity.effective_cost
+
+            await self.db.commit()
+            await self.db.refresh(db_transaction)
+
+            return Transaction.model_validate(db_transaction)
+
+        return None
+
     async def find_by_hash(self, tx_hash: str) -> Optional[Transaction]:
         query = select(models.TransactionDB).where(
             models.TransactionDB.tx_hash == tx_hash)

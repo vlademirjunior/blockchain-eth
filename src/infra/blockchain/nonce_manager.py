@@ -42,7 +42,7 @@ class NonceManager(INonceManager):
                 # A robust implementation might re-sync here.
                 # For now, I will raise an error.
                 raise ValueError(
-                    f"Nonce for address {address} is not managed. Please restart the application.")
+                    f"Nonce for address {address} is not managed. Please restart the API.")
 
             # Increment the nonce for the next request
             self._nonces[address] = current_nonce + 1

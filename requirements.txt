@@ -5,3 +5,8 @@ sqlalchemy==2.0.41
 python-dotenv==1.1.0
 pytest==8.4.1
 httpx==0.28.1
+aiosqlite==0.21.0
+pytest-asyncio==1.1.0
+cryptography==45.0.5
+eth_tester==0.13.0b1
+py-evm==0.12.1b1

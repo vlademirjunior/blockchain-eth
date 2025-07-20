@@ -20,4 +20,4 @@ def test_read_main():
     # Assert
     assert response.status_code == 200
     assert response.json() == {
-        'msg': "Ethereum Interaction API"}
+        'msg': "Blockchain Ethereum API is running"}

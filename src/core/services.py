@@ -157,23 +157,11 @@ class TransactionService(ITransactionService):
 
         return tx_entity
 
-    async def get_transaction_history(self) -> List[Transaction]:
-        # This calls the get_all method, which is now implemented.
-        db_transactions = await self.transaction_repo.get_all()
-        return [Transaction.model_validate(tx) for tx in db_transactions]
-
-    # Renamed method to match interface
     async def get_all_transaction_history(self) -> List[Transaction]:
-        """
-        Retrieves the full history of all managed transactions.
-        """
         db_transactions = await self.transaction_repo.get_all()
         return [Transaction.model_validate(tx) for tx in db_transactions]
 
     async def get_transaction_history_for_address(self, address: str) -> List[Transaction]:
-        """
-        Retrieves the history of managed transactions filtered by a specific Ethereum address.
-        """
         db_transactions = await self.transaction_repo.get_history(address=address)
         return [Transaction.model_validate(tx) for tx in db_transactions]
 

@@ -1,64 +1,63 @@
+from pydantic import BaseModel, Field, ConfigDict
 from decimal import Decimal
 from typing import List, Optional
-from pydantic import BaseModel, Field
 from src.core.enums import TransactionStatus
 
 
-class TransactionRequest(BaseModel):
-    """
-    Request model for creating a new on-chain transaction.
-    """
+# TODO: Separate in files
+
+class TransactionValidateRequest(BaseModel):
+    """Request body to validate a transaction."""
+    tx_hash: str = Field(..., min_length=66, max_length=66,
+                         description="The hash of the transaction to be validated.")
+
+
+class TransferDetail(BaseModel):
+    """Details of a validated transfer."""
+    asset: str
+    from_address: str
+    to_address: str
+    value: Decimal
+
+
+class TransactionValidateResponse(BaseModel):
+    """Response from the validation endpoint."""
+    is_valid: bool
+    message: str
+    transfer: Optional[TransferDetail] = None
+
+
+class TransactionCreateRequest(BaseModel):
+    """Request body to create a new transaction."""
     from_address: str = Field(...,
-                              description="The sender's Ethereum address.")
+                              description="The source address of the transfer.")
     to_address: str = Field(...,
-                            description="The recipient's Ethereum address.")
+                            description="The destination address of the transfer.")
     asset: str = Field(...,
-                       description="The asset to transfer (e.g., 'ETH', 'ERC-20_TOKEN').")
+                       description="The asset to be transferred (e.g., 'ETH').")
     value: Decimal = Field(..., gt=0,
-                           description="The amount of asset to transfer.")
+                           description="The amount to be transferred.")
 
 
-class TransactionResponse(BaseModel):
-    """
-    Response model for a transaction, used for both creation and history.
-    """
-    tx_hash: str = Field(..., description="The hash of the transaction.")
-    asset: str = Field(...,
-                       description="The asset involved in the transaction.")
-    from_address: str = Field(...,
-                              description="The sender's Ethereum address.")
-    to_address: str = Field(...,
-                            description="The recipient's Ethereum address.")
-    value: Decimal = Field(...,
-                           description="The value transferred in decimal format.")
-    status: TransactionStatus = Field(...,
-                                      description="The current status of the transaction.")
-    effective_cost: Decimal = Field(
-        ..., description="The effective cost of the transaction in ETH (gasUsed * effectiveGasPrice).")
+class TransactionCreateResponse(BaseModel):
+    """Response from the creation endpoint, indicating the transaction has been broadcast."""
+    status: str
+    tx_hash: str
 
 
-class TransactionValidationRequest(BaseModel):
-    """
-    Request model for validating an on-chain transaction.
-    """
-    tx_hash: str = Field(..., description="The transaction hash to validate.")
+class TransactionHistoryItem(BaseModel):
+    """Represents an item in the transaction history."""
+    tx_hash: str
+    asset: str
+    from_address: str
+    to_address: str
+    value: Decimal
+    status: TransactionStatus
+    effective_cost: Decimal
 
-
-class TransactionValidationResponse(BaseModel):
-    """
-    Response model for the transaction validation endpoint.
-    """
-    is_valid: bool = Field(...,
-                           description="Indicates if the transaction is valid and secure.")
-    transaction_details: Optional[TransactionResponse] = Field(
-        None, description="Details of the validated transaction if valid.")
-    message: str = Field(...,
-                         description="A message describing the validation result.")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TransactionHistoryResponse(BaseModel):
-    """
-    Response model for retrieving the transaction history.
-    """
-    transactions: List[TransactionResponse] = Field(
-        ..., description="List of recorded transaction history.")
+    """Response from the history endpoint."""
+    history: List[TransactionHistoryItem]

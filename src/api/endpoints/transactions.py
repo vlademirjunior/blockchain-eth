@@ -1,86 +1,81 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
-from src.core.services import ITransactionService
-from src.api.dependencies import get_transaction_service
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, status
 from src.api.schemas import (
-    TransactionRequest,
-    TransactionResponse,
-    TransactionValidationRequest,
-    TransactionValidationResponse,
-    TransactionHistoryResponse
+    TransactionValidateRequest,
+    TransactionValidateResponse,
+    TransactionCreateRequest,
+    TransactionCreateResponse,
+    TransactionHistoryResponse,
+    TransferDetail
 )
+from src.core.interfaces import ITransactionService
+from src.api.dependencies import get_transaction_service
+
+router = APIRouter()
 
 
-router = APIRouter(
-    prefix="/transactions",
-    tags=["Transactions"]
+@router.post(
+    "/validate",
+    response_model=TransactionValidateResponse,
+    summary="Validate an On-Chain Transaction",
+    description="Receives a transaction hash, validates its security (confirmations) and if the destination is a managed address. If valid, it is stored in the history."
 )
+async def validate_transaction(
+    request: TransactionValidateRequest,
+    service: ITransactionService = Depends(get_transaction_service)
+):
+    validated_tx = await service.validate_onchain_transaction(request.tx_hash)
+
+    if not validated_tx:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found, invalid, or not relevant to this service."
+        )
+
+    return TransactionValidateResponse(
+        is_valid=True,
+        message="Transaction successfully validated and stored in history.",
+        transfer=TransferDetail(
+            asset=validated_tx.asset,
+            from_address=validated_tx.from_address,
+            to_address=validated_tx.to_address,
+            value=validated_tx.value
+        )
+    )
 
 
 @router.post(
     "/create",
-    response_model=TransactionResponse,
-    status_code=202,  # 202 Accepted for background task
-    summary="Create and broadcast a new on-chain transaction",
-    description="Initiates a new Ethereum or ERC-20 token transfer. The transaction is broadcast immediately, and its confirmation status is updated in the background."
+    response_model=TransactionCreateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Create and Broadcast a New Transaction",
+    description="Creates, signs, and broadcasts a new transaction to the Ethereum network. Returns immediately with a pending status."
 )
-async def create_transaction_endpoint(
-    request: TransactionRequest,
+async def create_transaction(
+    request: TransactionCreateRequest,
     background_tasks: BackgroundTasks,
-    transaction_service: ITransactionService = Depends(get_transaction_service)
+    service: ITransactionService = Depends(get_transaction_service)
 ):
     try:
-        # Initial creation and broadcast (fast part)
-        transaction_entity = await transaction_service.create_onchain_transaction(
+        pending_tx = await service.create_onchain_transaction(
             from_address=request.from_address,
             to_address=request.to_address,
             asset=request.asset,
             value=request.value
         )
 
-        # Schedule the background task to wait for confirmation and update status
-        background_tasks.add_task(
-            transaction_service.wait_for_and_update_transaction_status,
-            tx_hash=transaction_entity.tx_hash
+        # TODO: Add the background task to wait for confirmation
+        # background_tasks.add_task(service.wait_for_confirmation, pending_tx.tx_hash)
+
+        return TransactionCreateResponse(
+            status=pending_tx.status.value,
+            tx_hash=pending_tx.tx_hash
         )
-
-        return TransactionResponse.model_validate(transaction_entity.model_dump())
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to create transaction: {str(e)}")
-
-
-@router.post(
-    "/validate",
-    response_model=TransactionValidationResponse,
-    summary="Validate an on-chain transaction",
-    description="Validates an Ethereum transaction by checking its status, confirmations, and if it's a credit to a managed address."
-)
-async def validate_transaction_endpoint(
-    request: TransactionValidationRequest,
-    transaction_service: ITransactionService = Depends(get_transaction_service)
-):
-    try:
-        validated_tx = await transaction_service.validate_onchain_transaction(request.tx_hash)
-
-        if validated_tx:
-            return TransactionValidationResponse(
-                is_valid=True,
-                transaction_details=TransactionResponse.model_validate(
-                    validated_tx.model_dump()),
-                message="Transaction is valid, secure, and credited to a managed address."
-            )
-        else:
-            return TransactionValidationResponse(
-                is_valid=False,
-                transaction_details=None,
-                message="Transaction could not be validated or does not meet security criteria."
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Transaction validation failed: {str(e)}")
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.get(
@@ -98,11 +93,11 @@ async def get_transaction_history_endpoint(
 ):
     try:
         if address:
-            transactions = await transaction_service.get_transaction_history_for_address(address)
+            history = await transaction_service.get_transaction_history_for_address(address)
         else:
-            transactions = await transaction_service.get_all_transaction_history()
+            history = await transaction_service.get_all_transaction_history()
 
-        return TransactionHistoryResponse(transactions=[TransactionResponse.model_validate(tx.model_dump()) for tx in transactions])
+        return TransactionHistoryResponse(history=history)
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve transaction history: {str(e)}")

@@ -1,9 +1,8 @@
 import json
 from typing import List, Dict, Any, Optional
-from web3 import Web3, HTTPProvider
+from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.exceptions import TransactionNotFound
 from src.core.interfaces import IBlockchainService
-from web3.middleware import proof_of_authority  # For PoA chains like Sepolia
 
 
 class Web3BlockchainService(IBlockchainService):
@@ -15,10 +14,8 @@ class Web3BlockchainService(IBlockchainService):
         if not rpc_url:
             raise ValueError("RPC URL cannot be empty.")
 
-        self.web3 = Web3(HTTPProvider(rpc_url))
+        self.web3 = AsyncWeb3(AsyncHTTPProvider(rpc_url))
 
-        # Inject the Geth PoA middleware for Sepolia or other PoA networks
-        self.web3.middleware_onion.inject(proof_of_authority, layer=0)
         # TODO: More robust way, like use local cache database and block explorer or Postgres with JSON field
         with open("src/infra/blockchain/erc20_abi.json") as f:
             self.erc20_abi = json.load(f)

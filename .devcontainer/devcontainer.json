@@ -30,7 +30,8 @@
 			"extensions": [
 				"ms-python.python",
 				"vscode-icons-team.vscode-icons",
-				"cnshenj.vscode-task-manager"
+				"cnshenj.vscode-task-manager",
+				"DavidAnson.vscode-markdownlint"
 			]
 		}
 	}

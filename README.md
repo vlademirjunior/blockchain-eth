@@ -142,7 +142,44 @@ docker-compose up --build
 
 ---
 
-## 4. Tutorial: Testar os Endpoints (Por exemplo)
+## 4. Executar os Testes
+
+O projeto tem uma suíte de testes completa que valida a lógica de negócio (testes unitários) e a interação com a infraestrutura (testes de integração).
+
+### Via Linha de Comando
+
+Para executar todos os testes (unitários e de integração), use o seguinte comando a partir da raiz do projeto:
+
+```bash
+python -m pytest -v
+```
+
+Para executar apenas os testes unitários (rápidos e sem I/O):
+
+```bash
+python -m pytest -v tests/unit
+```
+
+Para executar apenas os testes de integração (interagem com a base de dados em memória e o simulador de blockchain):
+
+```bash
+python -m pytest -v tests/integration
+```
+
+### Via VS Code Tasks
+
+O projeto vem com tarefas pré-configuradas para facilitar a execução dos testes:
+
+1. Abra a Paleta de Comandos (`Ctrl+Shift+P` ou `Cmd+Shift+P`).
+2. Digite "Tasks: Run Task".
+3. Escolha uma das opções:
+    - **Run Unit Tests** (padrão)
+    - **Run Integration Tests**
+    - **Run All Tests**
+
+---
+
+## 5. Tutorial: Testar os Endpoints (Por exemplo)
 
 Para testar os endpoints que interagem com a blockchain (`create`, `validate`), você vai precisar de um endereço com ETH de teste da rede Sepolia.
 
@@ -203,7 +240,7 @@ Interagir com uma blockchain não é sempre instantâneo, como você pode ter ap
 
 ---
 
-## 5. Princicpais Dependências do Projeto
+## 6. Princicpais Dependências do Projeto
 
 - **FastAPI:** Framework web para construir a API.
 - **Uvicorn:** Servidor ASGI para executar a API.
@@ -215,7 +252,7 @@ Interagir com uma blockchain não é sempre instantâneo, como você pode ter ap
 
 ---
 
-## 6. Estrutura de Pastas (Macro view)
+## 7. Estrutura de Pastas (Macro view)
 
 O projeto segue uma estrutura de Arquitetura Limpa para separar as responsabilidades e simples.
 
@@ -237,7 +274,7 @@ src/
 
 ---
 
-## 7. TODOs e Melhorias Futuras
+## 8. TODOs e Melhorias Futuras
 
 Os seguintes pontos foram deixados como `TODO` no código e representam oportunidades de melhoria para uma API de produção:
 
@@ -254,7 +291,7 @@ Os seguintes pontos foram deixados como `TODO` no código e representam oportuni
 
 ---
 
-## 8. Como Contribuir (Conventional commits)
+## 9. Como Contribuir (Conventional commits)
 
 1. Faça um fork do projeto.
 2. Crie uma nova branch (`git checkout -b feature/my-feature`).
@@ -265,6 +302,6 @@ Os seguintes pontos foram deixados como `TODO` no código e representam oportuni
 
 ---
 
-## 9. Licença
+## 10. Licença
 
 Este projeto está licenciado sob a Licença MIT. Veja o ficheiro `LICENSE` para mais detalhes.

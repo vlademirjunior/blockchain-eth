@@ -121,6 +121,8 @@ Este projeto está pronto para ser executado num ambiente de desenvolvimento em 
 
 ### Executar com Dev Containers (Recomendado)
 
+![decontainer](./images/devcontainer-tutorial.gif)
+
 1. Abra a pasta do projeto no VS Code.
 2. Uma notificação irá aparecer a perguntar para "Reopen in Container". Clique nela.
 3. O VS Code irá construir a imagem Docker e configurar o ambiente de desenvolvimento.

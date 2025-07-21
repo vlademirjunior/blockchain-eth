@@ -7,6 +7,7 @@ from web3 import Web3
 from web3.exceptions import TimeExhausted
 from .entities import Address, Transaction
 from .enums import TransactionStatus
+from .constants import MAX_ADDRESSES_TO_GENERATE
 from .interfaces import (
     ITransactionRepository,
     IAddressRepository,
@@ -34,6 +35,10 @@ class TransactionService(ITransactionService):
         self.nonce_manager = nonce_manager
         self.min_confirmations = int(os.getenv("MIN_CONFIRMATIONS", "12"))
         self.chain_id = int(os.getenv("CHAIN_ID", "11155111"))
+        self.priority_fee_gwei = int(
+            os.getenv("DEFAULT_PRIORITY_FEE_GWEI", "2"))
+        self.TRANSACTION_CONFIRMATION_TIMEOUT_SECONDS = int(
+            os.getenv("TRANSACTION_CONFIRMATION_TIMEOUT_SECONDS", "300"))
 
     async def validate_onchain_transaction(self, tx_hash: str) -> Optional[Transaction]:
         tx_details = await self.blockchain_service.get_transaction_details(tx_hash)
@@ -88,18 +93,17 @@ class TransactionService(ITransactionService):
             existing_tx.status = TransactionStatus.VALIDATED
             existing_tx.effective_cost = effective_cost
             return await self.transaction_repo.update(existing_tx)
-        else:
-            # TODO: For ERC-20, I would need to fetch the token decimal to convert from wei correctly.
-            tx_entity = Transaction(
-                tx_hash=tx_hash,
-                asset=asset,
-                from_address=tx_details['from'],
-                to_address=final_to_address,
-                value=Web3.from_wei(value_in_wei, 'ether'),
-                status=TransactionStatus.VALIDATED,
-                effective_cost=effective_cost
-            )
-            return await self.transaction_repo.create(tx_entity)
+
+        tx_entity = Transaction(
+            tx_hash=tx_hash,
+            asset=asset,
+            from_address=tx_details['from'],
+            to_address=final_to_address,
+            value=Web3.from_wei(value_in_wei, 'ether'),
+            status=TransactionStatus.VALIDATED,
+            effective_cost=effective_cost
+        )
+        return await self.transaction_repo.create(tx_entity)
 
     async def create_onchain_transaction(
         self,
@@ -122,8 +126,7 @@ class TransactionService(ITransactionService):
 
         # Calculate fees (EIP-1559)
         base_fee = await self.blockchain_service.get_base_fee()
-        # 2 Gwei tip (TODO: improve magic numbers)
-        priority_fee = Web3.to_wei(2, 'gwei')
+        priority_fee = Web3.to_wei(self.priority_fee_gwei, 'gwei')
         max_fee_per_gas = (2 * base_fee) + priority_fee
 
         tx_dict = {
@@ -180,7 +183,9 @@ class TransactionService(ITransactionService):
         print(f"BACKGROUND TASK: Started monitoring tx_hash: {tx_hash}")
         try:
             # Wait for the transaction receipt from the blockchain
-            receipt = await self.blockchain_service.wait_for_transaction_receipt(tx_hash, timeout=300)
+            receipt = await self.blockchain_service.wait_for_transaction_receipt(
+                tx_hash, timeout=self.TRANSACTION_CONFIRMATION_TIMEOUT_SECONDS
+            )
 
             # Find the original transaction record
             tx_entity = await self.transaction_repo.find_by_hash(tx_hash)
@@ -229,9 +234,9 @@ class AddressService(IAddressService):
         self.encryption_service = encryption_service
 
     async def create_new_addresses(self, count: int) -> List[Address]:
-        if not 0 < count <= 100:  # Basic validation
+        if not 0 < count <= MAX_ADDRESSES_TO_GENERATE:  # Basic validation
             raise ValueError(
-                "Number of addresses to create must be between 1 and 100.")
+                f"Number of addresses to create must be between 1 and {MAX_ADDRESSES_TO_GENERATE}.")
 
         new_addresses: List[Address] = []
         for _ in range(count):
@@ -252,7 +257,8 @@ class AddressService(IAddressService):
 
         await self.address_repo.create_many(new_addresses)
 
-        return new_addresses
+        # Return only the public parts of the addresses
+        return [Address(public_address=addr.public_address, encrypted_private_key='') for addr in new_addresses]
 
     async def get_all_addresses(self) -> List[Address]:
         return await self.address_repo.get_all()

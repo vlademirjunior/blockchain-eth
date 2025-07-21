@@ -22,13 +22,9 @@ async def create_addresses(
     request: AddressCreateRequest,
     service: IAddressService = Depends(get_address_service)
 ):
-    """
-    Endpoint to generate new Ethereum addresses (Task 1.1).
-    """
     try:
         created_entities = await service.create_new_addresses(request.count)
 
-        # Format the response using the Pydantic schema
         response_addresses = [
             AddressResponse(public_address=addr.public_address) for addr in created_entities
         ]
@@ -43,7 +39,6 @@ async def create_addresses(
             detail=str(e)
         )
     except Exception as e:
-        # Catch-all for other potential errors
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}"
@@ -61,7 +56,6 @@ async def list_addresses(
 ):
     address_entities = await service.get_all_addresses()
 
-    # Format the response using the Pydantic schema
     response_addresses = [
         AddressResponse(public_address=addr.public_address) for addr in address_entities
     ]

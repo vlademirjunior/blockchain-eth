@@ -112,8 +112,6 @@ Este projeto está pronto para ser executado num ambiente de desenvolvimento em 
     DATABASE_URL=sqlite+aiosqlite:///./local_database.db
     ENCRYPTION_KEYS=<SUA_CHAVE_DE_ENCRIPTACAO_AQUI>
     ETHEREUM_RPC_URL=<SUA_URL_RPC_DA_INFURA_AQUI>
-    CHAIN_ID=11155111
-    MIN_CONFIRMATIONS=12
     ```
 
     - Para gerar uma `ENCRYPTION_KEYS`, execute: `python src/generate_encryption_key.py`
@@ -290,6 +288,22 @@ Os seguintes pontos foram deixados como `TODO` no código e representam oportuni
 
 - **`TODOs` em `**.py`:**
   - Refatorar código e melhorar a organização mas que não impactam na qualidade do projeto.
+
+- **`TODO` em `api/main.py`:**
+  - **O quê:** "Use Alembic for production."
+  - **Porquê:** A criação de tabelas com `Base.metadata.create_all` é adequada para desenvolvimento, mas para produção, uma ferramenta de migração de banco de dados como o Alembic é essencial para gerenciar as alterações de esquema de forma incremental e reversível.
+
+- **Refatoração da Arquitetura (ISP e SRP):**
+  - **Segregação de Interfaces (ISP):** Continuar a refatoração das interfaces para torná-las mais granulares, garantindo que os clientes dependam apenas dos métodos que realmente utilizam. Isso inclui a atualização completa de todas as implementações e dependências para as novas interfaces.
+  - **Granularidade de Serviços (SRP - Use Cases):** Finalizar a decomposição dos serviços monolíticos em *Use Cases* menores e de propósito único, especialmente no `TransactionService`, e garantir que todas as chamadas e injeções de dependência estejam corretas.
+
+- **Tratamento de Exceções Globais:**
+  - **O quê:** Implementar um tratamento de exceções global e padronizado na camada de API para traduzir exceções de domínio em respostas HTTP apropriadas.
+  - **Porquê:** Garante que a API retorne mensagens de erro consistentes e significativas para o cliente, sem expor detalhes internos da implementação.
+
+- **Logging Estruturado:**
+  - **O quê:** Implementar logging estruturado (ex: JSON) em toda a aplicação.
+  - **Porquê:** Em produção, logs em texto simples são difíceis de pesquisar e analisar. Logs estruturados permitem filtrar por `transaction_hash`, `user_id`, `level`, etc., de forma muito mais eficiente em ferramentas de observabilidade como `Grafana` com `Loki` por exemplo.
 
 ---
 

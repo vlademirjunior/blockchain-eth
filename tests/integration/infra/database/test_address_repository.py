@@ -6,7 +6,6 @@ from src.core.entities import Address
 from src.infra.database.repositories import AddressRepository
 
 
-# TODO: Separate in file
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 test_engine = create_async_engine(TEST_DATABASE_URL)
@@ -84,6 +83,7 @@ class TestAddressRepository:
         # Assert
         assert found_address is not None
         assert isinstance(found_address, Address)
+
         assert found_address.public_address == "0xAddressToFind"
         assert found_address.encrypted_private_key == "key_to_find"
 

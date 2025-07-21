@@ -79,13 +79,11 @@ async def create_transaction(
             detail=str(e)
         )
     except Web3RPCError as e:
-        # Catch the specific "insufficient funds" error from the node
         if "insufficient funds" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"The source address ({request.from_address}) has insufficient funds to perform the transaction. Please fund it using a Sepolia faucet."
             )
-        # Handle other potential RPC errors
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred with the blockchain node: {str(e)}"

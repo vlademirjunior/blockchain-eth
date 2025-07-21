@@ -16,7 +16,7 @@ class Web3BlockchainService(IBlockchainService):
 
         self.web3 = AsyncWeb3(AsyncHTTPProvider(rpc_url))
 
-        # TODO: More robust way, like use local cache database and block explorer or Postgres with JSON field
+        # More robust way, like use local cache database and block explorer or Postgres with JSON field
         with open("src/infra/blockchain/erc20_abi.json") as f:
             self.erc20_abi = json.load(f)
 

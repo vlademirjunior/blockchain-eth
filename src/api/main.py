@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from src.api.endpoints import transactions, addresses
 from src.infra.database.config import engine
 from src.infra.database import models as db_models
+from src.core.constants import API_VERSION, API_PREFIX
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ async def lifespan(app: FastAPI):
     """
     print("API is starting up...")
 
-    # TODO: Use Alembic for production
+    # Use Alembic for production
     async with engine.begin() as conn:
         await conn.run_sync(db_models.Base.metadata.create_all)
 
@@ -31,7 +32,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Ethereum Interaction API",
     description="A secure API to interact with the Ethereum blockchain.",
-    version="1.0.0",
+    version=API_VERSION,
     lifespan=lifespan
 )
 
@@ -39,12 +40,12 @@ app = FastAPI(
 # Include the API routers
 app.include_router(
     transactions.router,
-    prefix="/api/v1/transactions",
+    prefix=f"{API_PREFIX}/transactions",
     tags=["Transactions"]
 )
 app.include_router(
     addresses.router,
-    prefix="/api/v1/addresses",
+    prefix=f"{API_PREFIX}/addresses",
     tags=["Addresses"]
 )
 

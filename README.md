@@ -318,6 +318,18 @@ Os seguintes pontos foram deixados como `TODO` no código e representam oportuni
 
 ---
 
-## 10. Licença
+## 10. Uso de Inteligência Artificial (IA)
+
+É importante ressaltar que a Inteligência Artificial (IA) foi utilizada neste projeto exclusivamente para os seguintes propósitos de apoio:
+
+1. **Apoio no Estudo e Entendimento do Domínio:** A IA foi uma ferramenta auxiliar para aprofundar o conhecimento sobre o domínio da blockchain e conceitos relacionados.
+2. **Geração do README:** Este documento (README.md) foi gerado com o auxílio de IA para estruturação e formatação.
+3. **Tradução de Textos:** Em momentos de dúvida com termos em inglês, a IA foi utilizada para traduções pontuais.
+
+**Todo o código-fonte deste projeto foi desenvolvido integralmente por mim, sem o uso de IA para sua geração.**
+
+---
+
+## 11. Licença
 
 Este projeto está licenciado sob a Licença MIT. Veja o ficheiro `LICENSE` para mais detalhes.

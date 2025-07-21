@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, Numeric
-from .config import Base
+from sqlalchemy import Column, String, Numeric
+from ..config import Base
 
 
 class TransactionDB(Base):
@@ -12,11 +12,3 @@ class TransactionDB(Base):
     value = Column(Numeric(36, 18), nullable=False)
     status = Column(String, nullable=False)
     effective_cost = Column(Numeric(36, 18), nullable=False)
-
-
-class AddressDB(Base):
-    __tablename__ = "addresses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    public_address = Column(String, unique=True, index=True, nullable=False)
-    encrypted_private_key = Column(String, nullable=False)

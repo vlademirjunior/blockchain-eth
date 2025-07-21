@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.core.services import AddressService
-from src.core.entities import Address
+from src.core.entities.address import Address
 from src.core.interfaces import IAddressRepository, IEncryptionService
 
 

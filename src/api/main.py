@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 from src.api.endpoints import transactions, addresses
 from src.infra.database.config import engine
-from src.infra.database import models as db_models
+from src.infra.database.config import Base
 from src.core.constants import API_VERSION, API_PREFIX
 
 load_dotenv()
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
     # Use Alembic for production
     async with engine.begin() as conn:
-        await conn.run_sync(db_models.Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
     print("Database tables created.")
 

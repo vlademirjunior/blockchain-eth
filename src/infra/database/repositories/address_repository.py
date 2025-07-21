@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.core.interfaces import IAddressRepository
-from src.core.entities import Address
+from src.core.entities.address import Address
 from .. import models
 
 

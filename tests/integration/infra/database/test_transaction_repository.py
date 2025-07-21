@@ -2,8 +2,8 @@ import pytest
 import pytest_asyncio
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from src.infra.database.models import Base
-from src.core.entities import Transaction
+from src.infra.database.config import Base
+from src.core.entities.transaction import Transaction
 from src.core.enums import TransactionStatus
 from src.infra.database.repositories import TransactionRepository
 

@@ -2,7 +2,8 @@ import pytest
 from decimal import Decimal
 from eth_account import Account
 from src.core.services import TransactionService
-from src.core.entities import Transaction as TransactionEntity, Address as AddressEntity
+from src.core.entities.transaction import Transaction as TransactionEntity
+from src.core.entities.address import Address as AddressEntity
 from src.core.enums import TransactionStatus
 from src.core.interfaces import (
     ITransactionRepository,

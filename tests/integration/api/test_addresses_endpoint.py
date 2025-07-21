@@ -4,7 +4,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from src.api.main import app
 from src.api.dependencies import get_address_service
-from src.core.entities import Address as AddressEntity
+from src.core.entities.address import Address as AddressEntity
 from src.core.interfaces import IAddressService
 
 

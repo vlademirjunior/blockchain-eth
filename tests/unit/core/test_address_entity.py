@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from src.core.entities import Address
+from src.core.entities.address import Address
 
 
 class TestAddressEntity:

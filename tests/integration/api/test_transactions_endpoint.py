@@ -5,7 +5,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from src.api.main import app
 from src.api.dependencies import get_transaction_service
-from src.core.entities import Transaction as TransactionEntity
+from src.core.entities.transaction import Transaction as TransactionEntity
 from src.core.enums import TransactionStatus
 from src.core.interfaces import ITransactionService
 from tests.constants import MOCK_TX_HASH, DEFAULT_ASSET, DEFAULT_VALUE_DECIMAL, DEFAULT_EFFECTIVE_COST_DECIMAL

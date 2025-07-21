@@ -260,16 +260,59 @@ O projeto segue uma estrutura de Arquitetura Limpa para separar as responsabilid
 src/
 ├── api/                # Camada de Apresentação (Endpoints, Schemas, Dependências)
 │   ├── endpoints/
+│   │   ├── __init__.py
+│   │   ├── addresses.py
+│   │   └── transactions.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── requests/
+│   │   │   ├── __init__.py
+│   │   │   ├── addresses.py
+│   │   │   └── transactions.py
+│   │   └── responses/
+│   │       ├── __init__.py
+│   │       ├── addresses.py
+│   │       └── transactions.py
+│   ├── __init__.py
+│   ├── dependencies.py
 │   └── main.py
 ├── core/               # Camada de Domínio (Entidades, Serviços, Interfaces)
-│   ├── entities.py
+│   ├── entities/
+│   │   ├── __init__.py
+│   │   ├── address.py
+│   │   └── transaction.py
 │   ├── enums.py
-│   ├── interfaces.py
-│   └── services.py
+│   ├── interfaces/
+│   │   ├── __init__.py
+│   │   ├── i_address_repository.py
+│   │   ├── ...
+│   │   └── i_transaction_service.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── address_service.py
+│   │   └── transaction_service.py
+│   ├── __init__.py
+│   └── constants.py
 └── infra/              # Camada de Infraestrutura (Detalhes Externos)
     ├── blockchain/     # Interação com Web3.py, NonceManager
+    │   ├── __init__.py
+    │   ├── erc20_abi.json
+    │   ├── nonce_manager.py
+    │   └── web3_service.py
     ├── database/       # Configuração do DB, Modelos, Repositórios
+    │   ├── repositories/
+    │   │   ├── __init__.py
+    │   │   ├── address_repository.py
+    │   │   └── transaction_repository.py
+    │   ├── __init__.py
+    │   ├── config.py
+    │   └── models/
+    │       ├── __init__.py
+    │       ├── address_db.py
+    │       └── transaction_db.py
     └── security/       # Serviço de Criptografia
+        ├── __init__.py
+        └── encryption.py
 ```
 
 ---

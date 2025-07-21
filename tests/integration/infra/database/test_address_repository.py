@@ -1,8 +1,8 @@
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from src.infra.database.models import Base
-from src.core.entities import Address
+from src.infra.database.config import Base
+from src.core.entities.address import Address
 from src.infra.database.repositories import AddressRepository
 
 

@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.core.interfaces import ITransactionRepository
-from src.core.entities import Transaction
+from src.core.entities.transaction import Transaction
 from .. import models
 
 

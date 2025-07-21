@@ -1,7 +1,7 @@
 from decimal import Decimal
 import pytest
 from pydantic import ValidationError
-from src.core.entities import Transaction
+from src.core.entities.transaction import Transaction
 
 
 class TestTransactionEntity:

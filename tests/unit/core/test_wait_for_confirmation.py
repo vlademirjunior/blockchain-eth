@@ -2,7 +2,7 @@ import pytest
 from decimal import Decimal
 from web3.exceptions import TimeExhausted
 from src.core.services import TransactionService
-from src.core.entities import Transaction as TransactionEntity
+from src.core.entities.transaction import Transaction as TransactionEntity
 from src.core.enums import TransactionStatus
 from src.core.interfaces import ITransactionRepository, IBlockchainService
 from src.core.constants import TRANSACTION_CONFIRMATION_TIMEOUT_SECONDS

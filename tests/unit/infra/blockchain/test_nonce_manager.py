@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock
 from src.infra.blockchain.nonce_manager import NonceManager
-from src.core.entities import Address as AddressEntity
+from src.core.entities.address import Address as AddressEntity
 from src.core.interfaces import IAddressRepository, IBlockchainService
 
 

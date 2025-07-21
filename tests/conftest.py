@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from src.api.main import app
 from src.api.dependencies import get_db
-from src.infra.database.models import Base
+from src.infra.database.config import Base
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

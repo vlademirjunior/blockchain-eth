@@ -34,10 +34,13 @@ class TestNonceManager:
         address2 = AddressEntity(
             public_address="0xAddr2", encrypted_private_key="key2")
 
+        INITIAL_NONCE_ADDR1 = 10
+        INITIAL_NONCE_ADDR2 = 42
+
         mock_address_repo.get_all.return_value = [address1, address2]
         mock_blockchain_service.get_transaction_count.side_effect = [
-            10, 42]  # Returns 10 for addr1, 42 for addr2
-        # TODO: Improve magic numbers
+            INITIAL_NONCE_ADDR1, INITIAL_NONCE_ADDR2
+        ]
 
         manager = NonceManager(mock_address_repo, mock_blockchain_service)
 
@@ -45,8 +48,8 @@ class TestNonceManager:
         await manager.initialize_nonces()
 
         # Assert
-        assert manager._nonces["0xAddr1"] == 10
-        assert manager._nonces["0xAddr2"] == 42
+        assert manager._nonces["0xAddr1"] == INITIAL_NONCE_ADDR1
+        assert manager._nonces["0xAddr2"] == INITIAL_NONCE_ADDR2
         assert mock_blockchain_service.get_transaction_count.call_count == 2
 
     async def test_get_next_nonce_returns_sequential_values(
@@ -62,6 +65,7 @@ class TestNonceManager:
         mock_blockchain_service.get_transaction_count.return_value = 5
 
         manager = NonceManager(mock_address_repo, mock_blockchain_service)
+
         await manager.initialize_nonces()
 
         # Act
@@ -73,6 +77,7 @@ class TestNonceManager:
         assert nonce1 == 5
         assert nonce2 == 6
         assert nonce3 == 7
+
         # Internal counter should be updated
         assert manager._nonces["0xAddr1"] == 8
 
@@ -90,6 +95,7 @@ class TestNonceManager:
         mock_blockchain_service.get_transaction_count.return_value = 100
 
         manager = NonceManager(mock_address_repo, mock_blockchain_service)
+
         await manager.initialize_nonces()
 
         # Act
@@ -105,6 +111,7 @@ class TestNonceManager:
 
         # Check that the sequence is correct
         expected_nonces = set(range(100, 150))
+
         assert set(results) == expected_nonces
 
         # Check that the internal counter was correctly updated
@@ -120,6 +127,7 @@ class TestNonceManager:
         # Arrange
         mock_address_repo.get_all.return_value = []  # No addresses initialized
         manager = NonceManager(mock_address_repo, mock_blockchain_service)
+
         await manager.initialize_nonces()
 
         # Act & Assert

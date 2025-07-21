@@ -70,18 +70,25 @@ class TestEncryptionService:
         Tests the core key rotation logic of MultiFernet.
         It should be able to decrypt data with an old key after a new one is added.
         """
-        # Arrange: Setup with an old key
+        # Arrange
+        # Setup with an old key
         old_key = Fernet.generate_key().decode()
+
         monkeypatch.setenv("ENCRYPTION_KEYS", old_key)
+
         service_with_old_key = EncryptionService()
+
         secret_data = b"data encrypted with the old key"
 
         # Encrypt data using only the old key
         encrypted_with_old_key = service_with_old_key.encrypt(secret_data)
 
-        # Act: Rotate the key by prepending a new key
+        # Act
+        # Rotate the key by prepending a new key
         new_key = Fernet.generate_key().decode()
+
         rotated_keys = f"{new_key},{old_key}"
+
         monkeypatch.setenv("ENCRYPTION_KEYS", rotated_keys)
 
         # Create a new service instance with the rotated keys
@@ -96,11 +103,13 @@ class TestEncryptionService:
         # The new service can decrypt data encrypted with the OLD key.
         decrypted_old_data = service_with_rotated_keys.decrypt(
             encrypted_with_old_key)
+
         assert decrypted_old_data == secret_data
 
         # The new service can decrypt data encrypted with the NEW key.
         decrypted_new_data = service_with_rotated_keys.decrypt(
             encrypted_with_new_key)
+
         assert decrypted_new_data == new_secret_data
 
     def test_decrypt_fails_with_invalid_token(self, monkeypatch):
@@ -109,8 +118,11 @@ class TestEncryptionService:
         """
         # Arrange
         key = Fernet.generate_key().decode()
+
         monkeypatch.setenv("ENCRYPTION_KEYS", key)
+
         service = EncryptionService()
+
         invalid_data = b"this is not a valid fernet token"
 
         # Act & Assert
@@ -127,7 +139,9 @@ class TestEncryptionService:
         """
         # Arrange
         key = Fernet.generate_key().decode()
+
         monkeypatch.setenv("ENCRYPTION_KEYS", key)
+
         service = EncryptionService()
 
         # Act & Assert
@@ -141,7 +155,9 @@ class TestEncryptionService:
         """
         # Arrange
         key = Fernet.generate_key().decode()
+
         monkeypatch.setenv("ENCRYPTION_KEYS", key)
+
         service = EncryptionService()
 
         # Act & Assert

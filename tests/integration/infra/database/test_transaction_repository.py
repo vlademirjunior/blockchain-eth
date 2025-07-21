@@ -2,13 +2,9 @@ import pytest
 import pytest_asyncio
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-# Ensure this path is correct for your DB models
 from src.infra.database.models import Base
-# Ensure this path is correct for your core entities
 from src.core.entities import Transaction
-# Ensure this path is correct for your enums
 from src.core.enums import TransactionStatus
-# Ensure this path is correct for your repository
 from src.infra.database.repositories import TransactionRepository
 
 
@@ -67,24 +63,28 @@ class TestTransactionRepository:
         # The create method now returns the Transaction entity, so capture it
         created_tx = await transaction_repo.create(test_tx_entity)
 
-        # Assert creation and returned object
+        # Assert
         assert created_tx is not None
-        # Assert it's a domain entity
+
+        # Assert
         assert isinstance(created_tx, Transaction)
+
         assert created_tx.tx_hash == "0x12345_test_create"
         assert created_tx.to_address == "0xToAddress"
         assert created_tx.value == Decimal("1.5")
         assert created_tx.status == TransactionStatus.CONFIRMED
 
-        # Assert finding the transaction
+        # Assert
         found_tx = await transaction_repo.find_by_hash("0x12345_test_create")
 
         assert found_tx is not None
-        assert isinstance(found_tx, Transaction)  # Assert it's a domain entity
+
+        assert isinstance(found_tx, Transaction)
+
         assert found_tx.tx_hash == "0x12345_test_create"
         assert found_tx.to_address == "0xToAddress"
         assert found_tx.value == Decimal("1.5")
-        # Verify status is also correctly retrieved
+
         assert found_tx.status == TransactionStatus.CONFIRMED
 
     async def test_find_by_hash_not_found(self, transaction_repo: TransactionRepository):
@@ -121,7 +121,7 @@ class TestTransactionRepository:
 
         # Assert
         assert len(history) == 2
-        # Ensure returned objects are domain entities
+
         for tx in history:
             assert isinstance(tx, Transaction)
 
@@ -158,7 +158,7 @@ class TestTransactionRepository:
 
         # Assert
         assert len(all_transactions) == 3
-        # Ensure returned objects are domain entities
+
         for tx in all_transactions:
             assert isinstance(tx, Transaction)
 

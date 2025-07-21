@@ -62,7 +62,6 @@ class TransactionRepository(ITransactionRepository):
 
         db_transactions = result.scalars().all()
 
-        # TODO: cache this result on service
         return [Transaction.model_validate(tx) for tx in db_transactions]
 
     async def get_all(self) -> List[Transaction]:

@@ -1,0 +1,19 @@
+# API Configuration
+API_VERSION = "1.0.0"
+API_PREFIX = "/api/v1"
+
+# Ethereum Network Configuration
+DEFAULT_PRIORITY_FEE_GWEI = 2
+MIN_CONFIRMATIONS = 12
+CHAIN_ID = 11155111  # Sepolia testnet
+TRANSACTION_CONFIRMATION_TIMEOUT_SECONDS = 300
+
+# Address Generation Limits
+MAX_ADDRESSES_TO_GENERATE = 100
+
+# Transaction Validation
+TRANSACTION_HASH_LENGTH = 66
+
+# Asset Identifiers
+ETH_ASSET_IDENTIFIER = "ETH"
+ERC20_ASSET_IDENTIFIER = "ERC-20_TOKEN"

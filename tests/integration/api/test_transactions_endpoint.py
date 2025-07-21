@@ -1,12 +1,14 @@
 import pytest
 from decimal import Decimal
 from unittest.mock import AsyncMock
+from fastapi import status
 from fastapi.testclient import TestClient
 from src.api.main import app
 from src.api.dependencies import get_transaction_service
 from src.core.entities import Transaction as TransactionEntity
 from src.core.enums import TransactionStatus
 from src.core.interfaces import ITransactionService
+from tests.constants import MOCK_TX_HASH, DEFAULT_ASSET, DEFAULT_VALUE_DECIMAL, DEFAULT_EFFECTIVE_COST_DECIMAL
 
 
 # Address I will use for filtering
@@ -43,20 +45,20 @@ class BaseEndpointTest:
 class TestGetHistoryEndpoint(BaseEndpointTest):
     """Test suite for the GET /history endpoint."""
 
-    async def test_get_all_history_success(self, test_client: TestClient):
+    async def test_get_all_history_success(self, test_client: TestClient, base_url: str):
         mock_service = AsyncMock(spec=ITransactionService)
         mock_service.get_all_transaction_history.return_value = MOCK_HISTORY_DATA
 
         app.dependency_overrides[get_transaction_service] = lambda: mock_service
 
-        response = test_client.get("/api/v1/transactions/history")
+        response = test_client.get(f"{base_url}/transactions/history")
 
-        assert response.status_code == 200
+        assert response.status_code == status.HTTP_200_OK
         assert len(response.json()["history"]) == 3
 
         mock_service.get_all_transaction_history.assert_awaited_once()
 
-    async def test_get_history_filtered_by_address_success(self, test_client: TestClient):
+    async def test_get_history_filtered_by_address_success(self, test_client: TestClient, base_url: str):
         filtered_data = [tx for tx in MOCK_HISTORY_DATA if FILTER_ADDRESS in (
             tx.from_address, tx.to_address)]
 
@@ -66,9 +68,9 @@ class TestGetHistoryEndpoint(BaseEndpointTest):
         app.dependency_overrides[get_transaction_service] = lambda: mock_service
 
         response = test_client.get(
-            f"/api/v1/transactions/history?address={FILTER_ADDRESS}")
+            f"{base_url}/transactions/history?address={FILTER_ADDRESS}")
 
-        assert response.status_code == 200
+        assert response.status_code == status.HTTP_200_OK
         assert len(response.json()["history"]) == 2
 
         mock_service.get_transaction_history_for_address.assert_awaited_once_with(
@@ -79,13 +81,13 @@ class TestGetHistoryEndpoint(BaseEndpointTest):
 class TestValidateTransactionEndpoint(BaseEndpointTest):
     """Test suite for the POST /validate endpoint."""
 
-    async def test_validate_transaction_success(self, test_client: TestClient):
+    async def test_validate_transaction_success(self, test_client: TestClient, base_url: str):
         """Scenario: Tests successful validation of a transaction."""
         # Arrange
         tx_hash = "0x" + "a" * 64
         mock_validated_tx = TransactionEntity(
-            tx_hash=tx_hash, asset="ETH", from_address="0xFrom", to_address="0xTo",
-            value=Decimal("1.0"), status=TransactionStatus.VALIDATED, effective_cost=Decimal("0.01")
+            tx_hash=MOCK_TX_HASH, asset=DEFAULT_ASSET, from_address="0xFrom", to_address="0xTo",
+            value=DEFAULT_VALUE_DECIMAL, status=TransactionStatus.VALIDATED, effective_cost=DEFAULT_EFFECTIVE_COST_DECIMAL
         )
         mock_service = AsyncMock(spec=ITransactionService)
         mock_service.validate_onchain_transaction.return_value = mock_validated_tx
@@ -93,17 +95,20 @@ class TestValidateTransactionEndpoint(BaseEndpointTest):
 
         # Act
         response = test_client.post(
-            "/api/v1/transactions/validate", json={"tx_hash": tx_hash})
+            f"{base_url}/transactions/validate", json={"tx_hash": tx_hash})
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == status.HTTP_200_OK
+
         response_data = response.json()
+
         assert response_data["is_valid"] is True
         assert response_data["transfer"]["asset"] == "ETH"
+
         mock_service.validate_onchain_transaction.assert_awaited_once_with(
             tx_hash)
 
-    async def test_validate_transaction_not_found(self, test_client: TestClient):
+    async def test_validate_transaction_not_found(self, test_client: TestClient, base_url: str):
         """Scenario: Tests response when the transaction is not found or invalid."""
         # Arrange
         tx_hash = "0x" + "b" * 64
@@ -113,10 +118,10 @@ class TestValidateTransactionEndpoint(BaseEndpointTest):
 
         # Act
         response = test_client.post(
-            "/api/v1/transactions/validate", json={"tx_hash": tx_hash})
+            f"{base_url}/transactions/validate", json={"tx_hash": tx_hash})
 
         # Assert
-        assert response.status_code == 404
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "not found, invalid, or not relevant" in response.json()[
             "detail"]
 
@@ -125,7 +130,7 @@ class TestValidateTransactionEndpoint(BaseEndpointTest):
 class TestCreateTransactionEndpoint(BaseEndpointTest):
     """Test suite for the POST /create endpoint."""
 
-    async def test_create_transaction_success(self, test_client: TestClient):
+    async def test_create_transaction_success(self, test_client: TestClient, base_url: str):
         """Scenario: Tests successful acceptance of a new transaction request."""
         # Arrange
         request_body = {
@@ -145,16 +150,19 @@ class TestCreateTransactionEndpoint(BaseEndpointTest):
 
         # Act
         response = test_client.post(
-            "/api/v1/transactions/create", json=request_body)
+            f"{base_url}/transactions/create", json=request_body)
 
         # Assert
-        assert response.status_code == 202  # Accepted
+        assert response.status_code == status.HTTP_202_ACCEPTED
+
         response_data = response.json()
+
         assert response_data["status"] == "pending"
         assert response_data["tx_hash"] == "0x_new_tx_hash"
+
         mock_service.create_onchain_transaction.assert_awaited_once()
 
-    async def test_create_transaction_service_error(self, test_client: TestClient):
+    async def test_create_transaction_service_error(self, test_client: TestClient, base_url: str):
         """Scenario: Tests a 400 Bad Request error if the service raises a ValueError."""
         # Arrange
         request_body = {"from_address": "0xUnmanaged",
@@ -166,21 +174,26 @@ class TestCreateTransactionEndpoint(BaseEndpointTest):
 
         # Act
         response = test_client.post(
-            "/api/v1/transactions/create", json=request_body)
+            f"{base_url}/transactions/create", json=request_body)
 
         # Assert
-        assert response.status_code == 400
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Source address not managed" in response.json()["detail"]
 
-    async def test_create_transaction_validation_error(self, test_client: TestClient):
+    async def test_create_transaction_validation_error(self, test_client: TestClient, base_url: str):
         """Scenario: Tests a 422 Unprocessable Entity for invalid input data."""
-        # Arrange: Invalid value (less than or equal to 0)
+        # Arrange
+        mock_service = AsyncMock(spec=ITransactionService)
+        mock_service.create_onchain_transaction.side_effect = ValueError(
+            "Invalid value")
+        app.dependency_overrides[get_transaction_service] = lambda: mock_service
+
         request_body = {"from_address": "0xFrom",
                         "to_address": "0xTo", "asset": "ETH", "value": -1}
 
         # Act
         response = test_client.post(
-            "/api/v1/transactions/create", json=request_body)
+            f"{base_url}/transactions/create", json=request_body)
 
         # Assert
-        assert response.status_code == 422
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

@@ -286,9 +286,6 @@ Os seguintes pontos foram deixados como `TODO` no código e representam oportuni
   - **O quê:** "Considerar uma forma mais robusta de gerir ABIs."
   - **Porquê:** Carregar um único ficheiro `erc20_abi.json` do disco é limitador. Uma solução de produção teria um sistema para gerir múltiplas ABIs, talvez guardando-as numa base de dados e buscando-as dinamicamente de um explorador de blocos (como o `Etherscan`) quando um novo contrato é encontrado.
 
-- **`TODOs` em `**.py`:**
-  - Refatorar código e melhorar a organização mas que não impactam na qualidade do projeto.
-
 - **`TODO` em `api/main.py`:**
   - **O quê:** "Use Alembic for production."
   - **Porquê:** A criação de tabelas com `Base.metadata.create_all` é adequada para desenvolvimento, mas para produção, uma ferramenta de migração de banco de dados como o Alembic é essencial para gerenciar as alterações de esquema de forma incremental e reversível.

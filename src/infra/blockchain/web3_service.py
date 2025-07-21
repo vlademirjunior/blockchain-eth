@@ -58,26 +58,25 @@ class Web3BlockchainService(IBlockchainService):
         # This is an async method with the async provider
         return await self.web3.eth.get_balance(checksum_address)
 
-    async def decode_contract_transaction(
-            self,
-            tx_hash: str,
-            contract_abi: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        tx = await self.get_transaction_details(tx_hash)
-        if not tx or not tx.get('to') or not tx.get('input'):
-            return None
-
+    def _decode_function_input(self, tx_input: str, contract_abi: List[Dict[str, Any]], to_address: str) -> Optional[Dict[str, Any]]:
         try:
             # For contract interactions, web3.py handles sync/async internally
             contract = self.web3.eth.contract(
-                address=tx['to'], abi=contract_abi)
-            func_obj, func_params = contract.decode_function_input(tx['input'])
-            return {
-                "function": func_obj.fn_name,
-                "params": func_params
-            }
+                address=to_address, abi=contract_abi)
+            func_obj, func_params = contract.decode_function_input(tx_input)
+            return {"function": func_obj.fn_name, "params": func_params}
         except ValueError:
             # Could not decode input data, likely not a call to a known function
             return None
+
+    async def decode_contract_transaction(
+        self, tx_hash: str, contract_abi: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        tx = await self.get_transaction_details(tx_hash)
+        if not tx or not tx.get("to") or not tx.get("input"):
+            return None
+
+        return self._decode_function_input(tx["input"], contract_abi, tx["to"])
 
     async def get_transaction_count(self, address: str) -> int:
         if not self.web3.is_address(address):
